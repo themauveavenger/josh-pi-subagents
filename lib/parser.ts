@@ -2,6 +2,8 @@
  * Agent content parsing - pure functions for unit testing
  */
 
+import YAML from "yaml";
+
 export interface RawFrontmatter {
   name?: string;
   description?: string;
@@ -20,38 +22,42 @@ export interface ParsedAgent {
 
 /**
  * Parse YAML frontmatter from markdown content
- * Simple parser - handles basic key: value format
+ * Uses the 'yaml' package for proper YAML parsing
  */
 export function parseFrontmatter(content: string): { frontmatter: RawFrontmatter; body: string } {
-  const frontmatter: RawFrontmatter = {};
-  
   // Check for frontmatter delimiters
   if (!content.startsWith("---\n") && !content.startsWith("---\r\n")) {
-    return { frontmatter, body: content };
+    return { frontmatter: {}, body: content };
   }
-  
+
   const endMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
   if (!endMatch) {
-    return { frontmatter, body: content };
+    return { frontmatter: {}, body: content };
   }
-  
+
   const frontmatterText = endMatch[1];
   const bodyStart = endMatch[0].length;
   const body = content.slice(bodyStart);
-  
-  // Parse simple key: value pairs
-  for (const line of frontmatterText.split(/\r?\n/)) {
-    const colonIndex = line.indexOf(":");
-    if (colonIndex === -1) continue;
-    
-    const key = line.slice(0, colonIndex).trim();
-    const value = line.slice(colonIndex + 1).trim();
-    
-    if (key && value !== undefined) {
+
+  // Parse YAML frontmatter using the yaml package
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = YAML.parse(frontmatterText) ?? {};
+  } catch {
+    parsed = {};
+  }
+
+  // Convert to RawFrontmatter (string values only)
+  const frontmatter: RawFrontmatter = {};
+  for (const [key, value] of Object.entries(parsed)) {
+    if (typeof value === "string") {
       frontmatter[key] = value;
+    } else if (value !== null && value !== undefined) {
+      // Coerce non-string values to string for backwards compatibility
+      frontmatter[key] = String(value);
     }
   }
-  
+
   return { frontmatter, body };
 }
 

@@ -56,10 +56,11 @@ This frontmatter never closes.`;
     assert.deepEqual(result.frontmatter, {});
   });
 
-  it("parses frontmatter with colons in values", () => {
+  it("parses frontmatter with quoted colons in values", () => {
+    // Values with colons must be quoted in YAML
     const content = `---
 name: test
-description: URL: https://example.com
+description: "URL: https://example.com"
 ---
 Body here.`;
 
@@ -69,10 +70,25 @@ Body here.`;
     assert.equal(result.frontmatter.description, "URL: https://example.com");
   });
 
-  it("handles empty frontmatter values", () => {
+  it("handles null frontmatter values as undefined", () => {
+    // In YAML, empty values are null, not empty string
     const content = `---
 name: test
 empty:
+---
+Body.`;
+
+    const result = parseFrontmatter(content);
+
+    assert.equal(result.frontmatter.name, "test");
+    assert.equal(result.frontmatter.empty, undefined);
+  });
+
+  it("handles explicit empty string values", () => {
+    // Explicitly quoted empty string
+    const content = `---
+name: test
+empty: ""
 ---
 Body.`;
 
