@@ -105,6 +105,34 @@ System prompt for the agent goes here.
 | `description` | ✅ | Short description shown to the LLM in the system prompt |
 | `model` | ❌ | Model to use (defaults to parent's model) |
 | `tools` | ❌ | Comma-separated list of allowed tools |
+| `taskTemplate` | ❌ | Task framing template; `{task}` is replaced with the delegation text. Falls back to `Task: {task}` if omitted. |
+
+### Task Templates
+
+By default, the subagent receives the delegation as `Task: <whatever the parent LLM decided>`. The `taskTemplate` field lets you control how the task is framed for that specific agent.
+
+The `{task}` placeholder is replaced with the task text from the parent. If you omit `taskTemplate`, the default `Task: {task}` is used. If the template doesn't contain `{task}`, the task text is ignored and the template is used verbatim (useful for fixed-prompt agents).
+
+```markdown
+---
+name: researcher
+description: Research specialist
+taskTemplate: |
+  Research request: {task}
+
+  Classify and investigate. Return Facts, Inference, Evidence, and Likely next step.
+---
+```
+
+This means the parent model's task — which might be vague like "look at auth" — becomes:
+
+```
+Research request: look at auth
+
+Classify and investigate. Return Facts, Inference, Evidence, and Likely next step.
+```
+
+The primary model doesn't need to know about the template. It just passes a task; the agent definition handles the framing.
 
 ### Agent Discovery Locations
 
@@ -125,7 +153,7 @@ There is no scope parameter. All agents from both locations are loaded and injec
 2. **Inject roster**: Before each LLM call, injects the agent roster (names + descriptions) into the system prompt so the LLM can see available agents without calling a tool first
 3. **Delegation**: When you say "Use X to...", the `delegate` tool spawns a subagent
 4. **Isolation**: Each subagent runs as `pi --mode json -p --no-session` with its own context
-5. **Execution**: Subagent receives its system prompt + your task
+5. **Execution**: Subagent receives its system prompt + your task (framed by the agent's `taskTemplate` if defined, otherwise `Task: ...`)
 6. **Return**: Only the final assistant message returns to the parent session
 
 The cache is refreshed on `/reload` and on session start.
@@ -160,6 +188,10 @@ name: researcher
 description: Fast reconnaissance specialist for finding code and documentation
 model: opencode-go/kimi-k2.5
 tools: read, grep, find, ls, bash
+taskTemplate: |
+  Research request: {task}
+
+  Investigate thoroughly and return structured findings.
 ---
 
 You are a research specialist. Your job is to investigate the codebase thoroughly and return **concise, structured findings**.
@@ -195,6 +227,10 @@ name: reviewer
 description: Code review specialist focused on correctness, edge cases, and maintainability
 model: opencode-go/kimi-k2.5
 tools: read, grep, find, ls
+taskTemplate: |
+  Review request: {task}
+
+  Assess correctness, edge cases, and maintainability. Report findings in the structured format below.
 ---
 
 You are a code reviewer. Your job is to review code changes for:
@@ -227,6 +263,10 @@ name: worker
 description: General-purpose implementation specialist with full tool access
 model: opencode-go/kimi-k2.5
 tools: read, write, edit, grep, find, ls, bash
+taskTemplate: |
+  Implementation task: {task}
+
+  Implement autonomously and report what was done, files changed, and any decisions or issues.
 ---
 
 You are a worker agent with full capabilities. Your job is to implement the assigned task autonomously.
