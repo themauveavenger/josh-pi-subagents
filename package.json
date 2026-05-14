@@ -1,12 +1,35 @@
 {
   "name": "josh-pi-subagents",
   "version": "0.1.0",
+  "type": "module",
   "description": "Minimalist subagent delegation for pi with BYOA support",
-  "keywords": ["pi-package", "subagent", "delegation"],
+  "keywords": [
+    "pi-package",
+    "subagent",
+    "delegation"
+  ],
   "license": "MIT",
-  "dependencies": {},
+  "engines": {
+    "node": ">=26.0.0"
+  },
+  "scripts": {
+    "test": "node --test lib/*.test.ts",
+    "test:watch": "node --test --watch lib/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "typecheck:watch": "tsc --noEmit --watch"
+  },
+  "devDependencies": {
+    "@earendil-works/pi-ai": "0.74.0",
+    "@earendil-works/pi-coding-agent": "0.74.0",
+    "@earendil-works/pi-tui": "0.74.0",
+    "@types/node": "25.7.0",
+    "typebox": "1.1.38",
+    "typescript": "6.0.3"
+  },
   "pi": {
-    "extensions": ["./index.ts"],
+    "extensions": [
+      "./index.ts"
+    ],
     "skills": [],
     "prompts": [],
     "themes": []

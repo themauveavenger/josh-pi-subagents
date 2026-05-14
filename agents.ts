@@ -8,7 +8,21 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getAgentDir, parseFrontmatter } from "@earendil-works/pi-coding-agent";
+import { getAgentDir } from "@earendil-works/pi-coding-agent";
+import {
+  parseAgentContent,
+  getAgentNameFromFile,
+} from "./lib/parser.ts";
+import {
+  formatAgentList,
+  formatAgentNames,
+} from "./lib/formatter.ts";
+import {
+  findNearestProjectAgentsDir,
+} from "./lib/path-utils.ts";
+
+// Re-export for convenience
+export { formatAgentList, formatAgentNames };
 
 export type AgentScope = "user" | "project" | "both";
 
@@ -53,23 +67,17 @@ function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig
       continue;
     }
 
-    const { frontmatter, body } = parseFrontmatter<Record<string, string>>(content);
-
-    if (!frontmatter.name || !frontmatter.description) {
+    const parsed = parseAgentContent(content, entry.name);
+    if (!parsed) {
       continue;
     }
 
-    const tools = frontmatter.tools
-      ?.split(",")
-      .map((t: string) => t.trim())
-      .filter(Boolean);
-
     agents.push({
-      name: frontmatter.name,
-      description: frontmatter.description,
-      tools: tools && tools.length > 0 ? tools : undefined,
-      model: frontmatter.model,
-      systemPrompt: body,
+      name: parsed.name,
+      description: parsed.description,
+      tools: parsed.tools,
+      model: parsed.model,
+      systemPrompt: parsed.systemPrompt,
       source,
       filePath,
     });
@@ -86,21 +94,13 @@ function isDirectory(p: string): boolean {
   }
 }
 
-function findNearestProjectAgentsDir(cwd: string): string | null {
-  let currentDir = cwd;
-  while (true) {
-    const candidate = path.join(currentDir, ".pi", "agents");
-    if (isDirectory(candidate)) return candidate;
-
-    const parentDir = path.dirname(currentDir);
-    if (parentDir === currentDir) return null;
-    currentDir = parentDir;
-  }
+function findProjectAgentsDir(cwd: string): string | null {
+  return findNearestProjectAgentsDir(cwd, isDirectory);
 }
 
 export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryResult {
   const userDir = path.join(getAgentDir(), "agents");
-  const projectAgentsDir = findNearestProjectAgentsDir(cwd);
+  const projectAgentsDir = findProjectAgentsDir(cwd);
 
   const userAgents = scope === "project" ? [] : loadAgentsFromDir(userDir, "user");
   const projectAgents = scope === "user" || !projectAgentsDir ? [] : loadAgentsFromDir(projectAgentsDir, "project");
@@ -119,12 +119,6 @@ export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryRe
   return { agents: Array.from(agentMap.values()), projectAgentsDir };
 }
 
-export function formatAgentList(agents: AgentConfig[], maxItems: number): { text: string; remaining: number } {
-  if (agents.length === 0) return { text: "none", remaining: 0 };
-  const listed = agents.slice(0, maxItems);
-  const remaining = agents.length - listed.length;
-  return {
-    text: listed.map((a) => `${a.name} (${a.source}): ${a.description}`).join("; "),
-    remaining,
-  };
-}
+// Re-export utility functions
+export { getAgentNameFromFile };
+export { formatAgentDetails } from "./lib/formatter.ts";
