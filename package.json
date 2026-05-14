@@ -1,0 +1,14 @@
+{
+  "name": "josh-pi-subagents",
+  "version": "0.1.0",
+  "description": "Minimalist subagent delegation for pi with BYOA support",
+  "keywords": ["pi-package", "subagent", "delegation"],
+  "license": "MIT",
+  "dependencies": {},
+  "pi": {
+    "extensions": ["./index.ts"],
+    "skills": [],
+    "prompts": [],
+    "themes": []
+  }
+}
