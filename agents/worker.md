@@ -1,7 +1,7 @@
 ---
 name: worker
 description: General-purpose implementation specialist with full tool access
-model: claude-sonnet-4-5
+model: opencode-go/kimi-k2.5
 tools: read, write, edit, grep, find, ls, bash
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: Code review specialist focused on correctness, edge cases, and maintainability
-model: claude-sonnet-4-5
+model: opencode-go/kimi-k2.5
 tools: read, grep, find, ls
 ---
 

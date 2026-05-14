@@ -1,7 +1,7 @@
 ---
 name: researcher
 description: Fast reconnaissance specialist for finding code, documentation, and patterns
-model: claude-haiku-4-5
+model: opencode-go/kimi-k2.5
 tools: read, grep, find, ls, bash
 ---
 
