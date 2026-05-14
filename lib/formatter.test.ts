@@ -8,7 +8,6 @@ import assert from "node:assert";
 import {
   formatAgentList,
   formatAgentNames,
-  formatAgentDetails,
 } from "./formatter.ts";
 import type { AgentConfig } from "../agents.ts";
 
@@ -117,57 +116,5 @@ describe("formatAgentNames", () => {
       formatAgentNames(agents),
       '"researcher", "worker", "reviewer"'
     );
-  });
-});
-
-describe("formatAgentDetails", () => {
-  it("formats basic agent info", () => {
-    const agent = createAgent("test", "user", "A test agent");
-
-    const result = formatAgentDetails(agent);
-
-    assert.ok(result.includes("test (user)"));
-    assert.ok(result.includes("A test agent"));
-  });
-
-  it("includes model when present", () => {
-    const agent = createAgent("test", "user", "A test agent", {
-      model: "claude-3",
-    });
-
-    const result = formatAgentDetails(agent);
-
-    assert.ok(result.includes("model: claude-3"));
-  });
-
-  it("includes tools when present", () => {
-    const agent = createAgent("test", "user", "A test agent", {
-      tools: ["read", "grep", "write"],
-    });
-
-    const result = formatAgentDetails(agent);
-
-    assert.ok(result.includes("tools: read, grep, write"));
-  });
-
-  it("includes both model and tools when present", () => {
-    const agent = createAgent("test", "user", "A test agent", {
-      model: "gpt-4",
-      tools: ["bash"],
-    });
-
-    const result = formatAgentDetails(agent);
-
-    assert.ok(result.includes("model: gpt-4"));
-    assert.ok(result.includes("tools: bash"));
-  });
-
-  it("excludes optional fields when not present", () => {
-    const agent = createAgent("simple", "project", "Simple agent");
-
-    const result = formatAgentDetails(agent);
-
-    assert.ok(!result.includes("model:"));
-    assert.ok(!result.includes("tools:"));
   });
 });

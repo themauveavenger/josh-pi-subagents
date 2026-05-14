@@ -39,23 +39,3 @@ export function formatAgentNames(agents: AgentConfig[]): string {
   if (agents.length === 0) return "none";
   return agents.map((a) => `"${a.name}"`).join(", ");
 }
-
-/**
- * Format a single agent for detailed display
- */
-export function formatAgentDetails(agent: AgentConfig): string {
-  const parts: string[] = [
-    `${agent.name} (${agent.source})`,
-    `  ${agent.description}`,
-  ];
-  
-  if (agent.model) {
-    parts.push(`  model: ${agent.model}`);
-  }
-  
-  if (agent.tools?.length) {
-    parts.push(`  tools: ${agent.tools.join(", ")}`);
-  }
-  
-  return parts.join("\n");
-}

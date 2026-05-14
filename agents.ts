@@ -14,15 +14,8 @@ import {
   getAgentNameFromFile,
 } from "./lib/parser.ts";
 import {
-  formatAgentList,
-  formatAgentNames,
-} from "./lib/formatter.ts";
-import {
   findNearestProjectAgentsDir,
 } from "./lib/path-utils.ts";
-
-// Re-export for convenience
-export { formatAgentList, formatAgentNames };
 
 export type AgentScope = "user" | "project" | "both";
 
@@ -121,4 +114,3 @@ export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryRe
 
 // Re-export utility functions
 export { getAgentNameFromFile };
-export { formatAgentDetails } from "./lib/formatter.ts";
