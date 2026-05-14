@@ -8,6 +8,7 @@ Minimalist subagent delegation for the [pi](https://pi.dev) coding agent. Offloa
 - **BYOA**: Bring Your Own Agent — define agents as `.md` files with YAML frontmatter
 - **Clean context**: Only the final summary returns to the parent (not full conversation history)
 - **Simple**: Single-agent delegation, no chains or parallel execution (by design)
+- **Context-aware**: Agent names and descriptions are injected into the system prompt so the LLM knows what's available before deciding whether to delegate
 
 ## Installation
 
@@ -50,7 +51,7 @@ Direct answer (2-3 sentences)
 EOF
 ```
 
-**Option B: Project-level agents** (available only in specific project)
+**Option B: Project-level agents** (available in that project)
 ```bash
 mkdir -p .pi/agents
 cat > .pi/agents/worker.md << 'EOF'
@@ -77,6 +78,8 @@ EOF
 Use researcher to find all authentication code in this codebase
 ```
 
+The LLM sees the full agent roster in its system prompt (name, source, and description for each agent), so it can choose the right agent without a discovery round-trip.
+
 If no agents are defined, the extension will return an error explaining where to place agent definitions.
 
 ## Agent Definition Format
@@ -99,20 +102,33 @@ System prompt for the agent goes here.
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | ✅ | Unique agent identifier |
-| `description` | ✅ | Short description for the LLM |
+| `description` | ✅ | Short description shown to the LLM in the system prompt |
 | `model` | ❌ | Model to use (defaults to parent's model) |
 | `tools` | ❌ | Comma-separated list of allowed tools |
 
 ### Agent Discovery Locations
 
-The extension scans for agent definitions (`.md` files with YAML frontmatter) in:
+The extension scans for agent definitions (`.md` files with YAML frontmatter) in both locations — all discovered agents are always available:
 
-| Location | Scope | When Available |
-|----------|-------|----------------|
-| `~/.pi/agent/agents/*.md` | User | Always (default) |
-| `.pi/agents/*.md` | Project | When `agentScope: "project"` or `"both"` |
+| Location | Scope | Always Available |
+|----------|-------|-----------------|
+| `~/.pi/agent/agents/*.md` | User | ✅ Yes |
+| `.pi/agents/*.md` | Project | ✅ Yes |
 
-**No agents are included with this package.** You must create your own agent definitions in one of these locations before using the extension.
+There is no scope parameter. All agents from both locations are loaded and injected into the system prompt. Project-level agents are discovered by walking up from the current working directory.
+
+**No agents are included with this package.** You must create your own agent definitions before using the extension.
+
+## How It Works
+
+1. **Cache on startup**: Scans both `~/.pi/agent/agents/` and `.pi/agents/` and caches the agent list
+2. **Inject roster**: Before each LLM call, injects the agent roster (names + descriptions) into the system prompt so the LLM can see available agents without calling a tool first
+3. **Delegation**: When you say "Use X to...", the `delegate` tool spawns a subagent
+4. **Isolation**: Each subagent runs as `pi --mode json -p --no-session` with its own context
+5. **Execution**: Subagent receives its system prompt + your task
+6. **Return**: Only the final assistant message returns to the parent session
+
+The cache is refreshed on `/reload` and on session start.
 
 ## Usage
 
@@ -231,14 +247,6 @@ What was done (2-3 sentences max)
 - Issues encountered
 ```
 
-## How It Works
-
-1. **Discovery**: Scans `~/.pi/agent/agents/` for `.md` files with YAML frontmatter
-2. **Delegation**: When you say "Use X to...", the `delegate` tool spawns a subagent
-3. **Isolation**: Each subagent runs as `pi --mode json -p --no-session` with its own context
-4. **Execution**: Subagent receives its system prompt + your task
-5. **Return**: Only the final assistant message returns to the parent session
-
 ## Why No Chains or Parallel Execution?
 
 This package intentionally omits:
@@ -255,7 +263,7 @@ cd josh-pi-subagents
 pi install ./
 ```
 
-Edit agents in `~/.pi/agent/agents/` and test immediately — agents are discovered fresh on each invocation.
+Edit agents in `~/.pi/agent/agents/` and test immediately — agents are reloaded on `/reload` or when a new session starts.
 
 ### Manual Testing
 
@@ -288,25 +296,18 @@ pi -p -e ./index.ts "Use nonexistent-agent to do something"
 # Should return: "Unknown agent: \"nonexistent-agent\". Available: \"researcher\", \"reviewer\", \"worker\"."
 ```
 
-#### Test Different Agent Scopes
+#### Test Roster Injection
 ```bash
-# User scope only (default)
-pi -p -e ./index.ts "Use researcher to find TODOs"
-
-# Project scope (if you have .pi/agents/ in your project)
-pi -p -e ./index.ts "Use my-project-agent to do something with agentScope: project"
-
-# Both scopes
-pi -p -e ./index.ts "Use researcher with agentScope: both to find TODOs"
+# Start interactive mode and check the system prompt includes agent names
+pi -e ./index.ts
+# Then ask: "What agents are available?"
+# The LLM should list all agents by name without calling any tool
 ```
 
 #### Test Error Handling
 ```bash
 # Unknown agent
 pi -p -e ./index.ts "Use fake-agent to do work"
-
-# Missing agent name
-pi -p -e ./index.ts "delegate to do something"
 ```
 
 #### Hot Reload During Development
@@ -318,7 +319,7 @@ ln -s $(pwd) ~/.pi/agent/extensions/josh-pi-subagents
 # Run pi normally (loads extension automatically)
 pi
 
-# After editing files, reload without restarting pi:
+# After editing agents or extension files, reload without restarting pi:
 /reload
 ```
 

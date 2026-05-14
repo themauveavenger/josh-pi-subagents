@@ -8,7 +8,8 @@
  * - Single-agent delegation only (no chains, no parallel)
  * - .md agent definitions with YAML frontmatter
  * - Returns only final summary (not full conversation history)
- * - User-scope agents by default (simpler security model)
+ * - All agents (user + project) always available, no scope gating
+ * - Agent roster injected into system prompt for instant discovery
  */
 
 import { spawn } from "node:child_process";
@@ -16,15 +17,15 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import type { Message } from "@earendil-works/pi-ai";
-import { StringEnum } from "@earendil-works/pi-ai";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { type AgentConfig, type AgentScope, discoverAgents } from "./agents.js";
+import { type AgentConfig, discoverAgents } from "./agents.js";
+import { formatRoster } from "./lib/roster.js";
 
 interface SubagentResult {
   agent: string;
-  agentSource: "user" | "project" | "unknown";
+  agentSource: string;
   task: string;
   exitCode: number;
   output: string;
@@ -41,6 +42,9 @@ interface DelegateDetails {
   exitCode: number;
   model?: string;
 }
+
+/** Cached agent discovery, populated on session_start and resources_discover */
+let cachedAgents: AgentConfig[] | null = null;
 
 /**
  * Extract only the final assistant message text
@@ -200,34 +204,57 @@ async function runSubagent(
   }
 }
 
-// Schema for the delegate tool
-const AgentScopeSchema = StringEnum(["user", "project", "both"] as const, {
-  description: 'Which agent directories to use. Default: "user".',
-  default: "user",
-});
-
 const DelegateParams = Type.Object({
   agent: Type.String({ description: "Name of the agent to invoke" }),
   task: Type.String({ description: "Task to delegate to the agent" }),
-  agentScope: Type.Optional(AgentScopeSchema),
   cwd: Type.Optional(Type.String({ description: "Working directory for the agent process" })),
 });
 
 export default function (pi: ExtensionAPI) {
+  // Populate agent cache on session start
+  pi.on("session_start", async (_event, ctx) => {
+    const discovery = discoverAgents(ctx.cwd, "both");
+    cachedAgents = discovery.agents;
+  });
+
+  // Refresh agent cache on reload
+  pi.on("resources_discover", async (_event, ctx) => {
+    const discovery = discoverAgents(ctx.cwd, "both");
+    cachedAgents = discovery.agents;
+  });
+
+  // Inject agent roster into system prompt before each LLM call
+  pi.on("before_agent_start", async (event, ctx) => {
+    if (!cachedAgents) {
+      const discovery = discoverAgents(ctx.cwd, "both");
+      cachedAgents = discovery.agents;
+    }
+    if (cachedAgents.length === 0) return;
+
+    // Only inject if the delegate tool is active
+    const activeTools = pi.getActiveTools();
+    if (!activeTools.includes("delegate")) return;
+
+    const roster = formatRoster(cachedAgents);
+    return { systemPrompt: event.systemPrompt + roster };
+  });
+
   pi.registerTool({
     name: "delegate",
     label: "Delegate",
     description: [
       "Delegate a task to a specialized subagent with isolated context.",
-      'Agents are defined in ~/.pi/agent/agents/*.md with YAML frontmatter.',
+      "Agents are defined in ~/.pi/agent/agents/*.md and .pi/agents/*.md with YAML frontmatter.",
       "Returns only the final summary (not full conversation history).",
     ].join(" "),
+    promptSnippet: "Delegate a task to a specialized subagent by name",
+    promptGuidelines: [
+      "Use delegate to invoke a named subagent with a task. Agent names are listed in the Available Subagents section of the system prompt.",
+    ],
     parameters: DelegateParams,
 
     async execute(_toolCallId, params, signal, _onUpdate, ctx) {
-      const agentScope: AgentScope = params.agentScope ?? "user";
-      const discovery = discoverAgents(ctx.cwd, agentScope);
-      const agents = discovery.agents;
+      const agents = cachedAgents ?? discoverAgents(ctx.cwd, "both").agents;
 
       // If no agents are defined at all, provide helpful error
       if (agents.length === 0) {
@@ -236,7 +263,7 @@ export default function (pi: ExtensionAPI) {
           "",
           "Create agent definitions (.md files with YAML frontmatter) in:",
           "  - ~/.pi/agent/agents/*.md     (user-level, always available)",
-          "  - ./.pi/agents/*.md           (project-level, requires agentScope: 'project')",
+          "  - ./.pi/agents/*.md           (project-level)",
           "",
           "Example agent definition:",
           "  ---",
@@ -246,8 +273,6 @@ export default function (pi: ExtensionAPI) {
           "  tools: read, grep, find",
           "  ---",
           "  You are a research specialist. Find information and return concise results.",
-          "",
-          `Current agentScope: "${agentScope}"`,
         ].join("\n");
 
         return {
@@ -306,7 +331,6 @@ export default function (pi: ExtensionAPI) {
     },
 
     renderCall(args, theme, _context) {
-      const scope: AgentScope = args.agentScope ?? "user";
       const agentName = args.agent || "...";
       const preview = args.task
         ? args.task.length > 60
@@ -317,7 +341,6 @@ export default function (pi: ExtensionAPI) {
       const text =
         theme.fg("toolTitle", theme.bold("delegate ")) +
         theme.fg("accent", agentName) +
-        theme.fg("muted", ` [${scope}]`) +
         "\n  " +
         theme.fg("dim", preview);
 
