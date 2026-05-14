@@ -8,6 +8,7 @@ import assert from "node:assert";
 import {
   formatAgentList,
   formatAgentNames,
+  formatUserMessage,
 } from "./formatter.ts";
 import type { AgentConfig } from "../agents.ts";
 
@@ -116,5 +117,37 @@ describe("formatAgentNames", () => {
       formatAgentNames(agents),
       '"researcher", "worker", "reviewer"'
     );
+  });
+});
+
+describe("formatUserMessage", () => {
+  it("prefixes with 'Task:' when no template provided", () => {
+    assert.equal(formatUserMessage("find bugs"), "Task: find bugs");
+  });
+
+  it("prefixes with 'Task:' when template is undefined", () => {
+    assert.equal(formatUserMessage("find bugs", undefined), "Task: find bugs");
+  });
+
+  it("substitutes {task} in template", () => {
+    const template = "Please research: {task}\n\nCite your sources.";
+    assert.equal(
+      formatUserMessage("famous inventors of the 1900s", template),
+      "Please research: famous inventors of the 1900s\n\nCite your sources."
+    );
+  });
+
+  it("replaces all occurrences of {task}", () => {
+    const template = "First: {task}. Again: {task}.";
+    assert.equal(formatUserMessage("search", template), "First: search. Again: search.");
+  });
+
+  it("returns template verbatim when it has no {task} placeholder", () => {
+    const template = "Do your thing.";
+    assert.equal(formatUserMessage("ignored task", template), "Do your thing.");
+  });
+
+  it("falls back to 'Task:' prefix for empty template", () => {
+    assert.equal(formatUserMessage("do stuff", ""), "Task: do stuff");
   });
 });

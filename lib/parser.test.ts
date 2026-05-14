@@ -195,6 +195,53 @@ description: Test
 
     assert.equal(result?.systemPrompt, "Prompt with surrounding whitespace");
   });
+
+  it("parses taskTemplate from frontmatter", () => {
+    const content = `---
+name: researcher
+description: Research agent
+taskTemplate: |
+  Please research the following thoroughly and return structured findings:
+
+  {task}
+
+  Cite your sources.
+---
+System prompt here.`;
+
+    const result = parseAgentContent(content, "researcher.md");
+
+    assert.notEqual(result, null);
+    assert.ok(result?.taskTemplate?.includes("{task}"));
+    assert.ok(result?.taskTemplate?.includes("research the following"));
+  });
+
+  it("returns undefined taskTemplate when not present", () => {
+    const content = `---
+name: simple
+description: Simple agent
+---
+System prompt.`;
+
+    const result = parseAgentContent(content, "simple.md");
+
+    assert.notEqual(result, null);
+    assert.equal(result?.taskTemplate, undefined);
+  });
+
+  it("handles taskTemplate without {task} placeholder", () => {
+    const content = `---
+name: fixed
+description: Fixed template agent
+taskTemplate: "Do your thing."
+---
+System prompt.`;
+
+    const result = parseAgentContent(content, "fixed.md");
+
+    assert.notEqual(result, null);
+    assert.equal(result?.taskTemplate, "Do your thing.");
+  });
 });
 
 describe("getAgentNameFromFile", () => {

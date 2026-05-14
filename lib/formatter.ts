@@ -4,6 +4,18 @@
 
 import type { AgentConfig } from "../agents.ts";
 
+/**
+ * Format the user message sent to a subagent.
+ * If the agent has a taskTemplate, substitute {task} into it;
+ * otherwise use the default "Task: ..." prefix.
+ */
+export function formatUserMessage(task: string, taskTemplate?: string): string {
+  if (taskTemplate) {
+    return taskTemplate.replace(/{task}/g, task);
+  }
+  return `Task: ${task}`;
+}
+
 export interface FormattedAgentList {
   text: string;
   remaining: number;

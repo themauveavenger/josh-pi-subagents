@@ -22,6 +22,7 @@ import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { type AgentConfig, discoverAgents } from "./agents.js";
 import { formatRoster } from "./lib/roster.js";
+import { formatUserMessage } from "./lib/formatter.js";
 
 interface SubagentResult {
   agent: string;
@@ -112,7 +113,9 @@ async function runSubagent(
 
   try {
     args.push("--append-system-prompt", tmpFile);
-    args.push(`Task: ${task}`);
+
+    const userMessage = formatUserMessage(task, agent.taskTemplate);
+    args.push(userMessage);
 
     const messages: Message[] = [];
     let wasAborted = false;
@@ -332,17 +335,13 @@ export default function (pi: ExtensionAPI) {
 
     renderCall(args, theme, _context) {
       const agentName = args.agent || "...";
-      const preview = args.task
-        ? args.task.length > 60
-          ? `${args.task.slice(0, 60)}...`
-          : args.task
-        : "...";
+      const task = args.task || "...";
 
       const text =
         theme.fg("toolTitle", theme.bold("delegate ")) +
         theme.fg("accent", agentName) +
         "\n  " +
-        theme.fg("dim", preview);
+        theme.fg("dim", task);
 
       return new Text(text, 0, 0);
     },
@@ -360,6 +359,7 @@ export default function (pi: ExtensionAPI) {
 
       const lines = [
         `${icon} ${theme.fg("toolTitle", theme.bold(details.agent))}${theme.fg("muted", ` (${details.agentSource})`)}`,
+        theme.fg("dim", `Task: ${details.task}`),
         theme.fg("dim", text),
       ];
 

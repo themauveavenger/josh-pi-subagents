@@ -17,6 +17,7 @@ export interface ParsedAgent {
   description: string;
   model?: string;
   tools?: string[];
+  taskTemplate?: string;
   systemPrompt: string;
 }
 
@@ -85,6 +86,7 @@ export function parseAgentContent(
     description: frontmatter.description,
     model: frontmatter.model,
     tools: tools?.length ? tools : undefined,
+    taskTemplate: frontmatter.taskTemplate,
     systemPrompt: body.trim(),
   };
 }

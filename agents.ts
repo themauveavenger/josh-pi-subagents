@@ -24,6 +24,7 @@ export interface AgentConfig {
   description: string;
   tools?: string[];
   model?: string;
+  taskTemplate?: string;
   systemPrompt: string;
   source: "user" | "project";
   filePath: string;
@@ -70,6 +71,7 @@ function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig
       description: parsed.description,
       tools: parsed.tools,
       model: parsed.model,
+      taskTemplate: parsed.taskTemplate,
       systemPrompt: parsed.systemPrompt,
       source,
       filePath,
