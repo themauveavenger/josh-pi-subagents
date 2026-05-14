@@ -130,17 +130,6 @@ This package intentionally omits:
 
 The goal is predictable, debuggable delegation. If you need complex orchestration, the parent agent should drive it.
 
-## Comparison to Other Subagent Packages
-
-| Feature | josh-pi-subagents | @mjakl/pi-subagent | pi-subagents |
-|---------|-------------------|-------------------|--------------|
-| **Philosophy** | Minimalist, explicit | Minimalist | Feature-rich |
-| **Chains** | ❌ No | ❌ No | ✅ Yes |
-| **Parallel** | ❌ No | ✅ Yes | ✅ Yes |
-| **Fork mode** | ❌ No | ✅ Yes | ❌ No |
-| **Agent format** | `.md` with YAML | Code/config | Code/config |
-| **UI complexity** | Simple text | Moderate | Rich widgets |
-
 ## Development
 
 ```bash
@@ -150,6 +139,87 @@ pi install ./
 ```
 
 Edit agents in `~/.pi/agent/agents/` and test immediately — agents are discovered fresh on each invocation.
+
+### Manual Testing
+
+#### Quick Load Test (Interactive Mode)
+```bash
+# Load extension and enter interactive mode
+pi -e ./index.ts
+```
+Then type in the pi prompt:
+```
+Use researcher to find all TODO comments in this codebase
+```
+
+#### Print Mode (Non-interactive, Best for Scripts)
+```bash
+# Single prompt, stdout output, no TUI
+pi -p -e ./index.ts "Use researcher to list the files in the current directory"
+
+# With specific working directory
+pi -p -e ./index.ts --cwd /path/to/project "Use researcher to explore the src/ directory"
+
+# JSON mode (structured output for programmatic use)
+pi --mode json -p -e ./index.ts "Use researcher to find all markdown files"
+```
+
+#### Test Agent Discovery
+```bash
+# Verify agents are found with a test invocation
+pi -p -e ./index.ts "Use nonexistent-agent to do something"
+# Should return: "Unknown agent: \"nonexistent-agent\". Available: \"researcher\", \"reviewer\", \"worker\"."
+```
+
+#### Test Different Agent Scopes
+```bash
+# User scope only (default)
+pi -p -e ./index.ts "Use researcher to find TODOs"
+
+# Project scope (if you have .pi/agents/ in your project)
+pi -p -e ./index.ts "Use my-project-agent to do something with agentScope: project"
+
+# Both scopes
+pi -p -e ./index.ts "Use researcher with agentScope: both to find TODOs"
+```
+
+#### Test Error Handling
+```bash
+# Unknown agent
+pi -p -e ./index.ts "Use fake-agent to do work"
+
+# Missing agent name
+pi -p -e ./index.ts "delegate to do something"
+```
+
+#### Hot Reload During Development
+```bash
+# Place extension in auto-discovery path for /reload support
+mkdir -p ~/.pi/agent/extensions/
+ln -s $(pwd) ~/.pi/agent/extensions/josh-pi-subagents
+
+# Run pi normally (loads extension automatically)
+pi
+
+# After editing files, reload without restarting pi:
+/reload
+```
+
+#### Quick Test Checklist
+
+| Test | Command | Expected Result |
+|------|---------|-----------------|
+| Extension loads | `pi -e ./index.ts` | No errors, extension active |
+| Researcher works | `pi -p -e ./index.ts "Use researcher to find all .ts files"` | File list returned |
+| Reviewer works | `pi -p -e ./index.ts "Use reviewer to review agents.ts"` | Review output |
+| Worker works | `pi -p -e ./index.ts "Use worker to create a test file"` | File created, confirmation |
+| Unknown agent | `pi -p -e ./index.ts "Use fake to work"` | Error with available list |
+
+**Shell aliases for convenience:**
+```bash
+alias pi-test='pi -p -e ./index.ts'
+alias pi-dev='pi -e ./index.ts'
+```
 
 ## License
 
