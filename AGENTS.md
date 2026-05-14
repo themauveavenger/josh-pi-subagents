@@ -6,6 +6,13 @@
 - **Typecheck:** `npx tsc --noEmit` (project is type-stripped, never compiled)
 - **`mise.toml`** pins Node 26. If not using mise, ensure Node ≥26 is active.
 
+## Definition of done
+
+Before marking any feature or change as complete, **all three** must pass:
+- `npm run lint` — zero eslint errors
+- `npm test` — all tests passing
+- `npm run typecheck` — clean `tsc --noEmit`
+
 ## Landmines
 
 - **Import extensions in test files:** Use `.ts` extensions in test imports (e.g., `import { … } from "./parser.ts"`), not `.js`. The project uses `verbatimModuleSyntax` + `NodeNext` — `.js` imports will fail at runtime even though TypeScript resolves them.
