@@ -11,22 +11,22 @@ export function findNearestProjectAgentsDir(
   exists: (p: string) => boolean
 ): string | null {
   let currentDir = cwd;
-  
+
   while (true) {
     // Use / for path joining in the check function
-    const candidate = currentDir + "/.pi/agents";
-    
+    const candidate = currentDir + '/.pi/agents';
+
     if (exists(candidate)) {
       return candidate;
     }
-    
-    const parentDir = currentDir.split("/").slice(0, -1).join("/") || "/";
-    
+
+    const parentDir = currentDir.split('/').slice(0, -1).join('/') || '/';
+
     // Stop at root
-    if (parentDir === currentDir || parentDir === "") {
+    if (parentDir === currentDir || parentDir === '') {
       return null;
     }
-    
+
     currentDir = parentDir;
   }
 }
@@ -35,7 +35,7 @@ export function findNearestProjectAgentsDir(
  * Normalize a path to use forward slashes
  */
 export function normalizePath(p: string): string {
-  return p.replace(/\\/g, "/");
+  return p.replace(/\\/g, '/');
 }
 
 /**
@@ -43,14 +43,14 @@ export function normalizePath(p: string): string {
  */
 export function dirname(p: string): string {
   const normalized = normalizePath(p);
-  const parts = normalized.split("/");
+  const parts = normalized.split('/');
   parts.pop();
   // Handle root directory case: "/file" -> parts ["", "file"] -> pop -> [""] -> join -> ""
   // But we want "/" for root. However, "file" -> parts ["file"] -> pop -> [] -> join -> ""
   // and we want "" for that case. So only add "/" if original started with "/" and result is empty.
-  const result = parts.join("/");
-  if (normalized.startsWith("/") && result === "") {
-    return "/";
+  const result = parts.join('/');
+  if (normalized.startsWith('/') && result === '') {
+    return '/';
   }
   return result;
 }
@@ -60,7 +60,7 @@ export function dirname(p: string): string {
  */
 export function joinPath(...segments: string[]): string {
   return segments
-    .map((s) => s.replace(/\\/g, "/").replace(/\/$/, ""))
+    .map(s => s.replace(/\\/g, '/').replace(/\/$/, ''))
     .filter(Boolean)
-    .join("/");
+    .join('/');
 }

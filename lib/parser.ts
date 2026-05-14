@@ -2,7 +2,7 @@
  * Agent content parsing - pure functions for unit testing
  */
 
-import YAML from "yaml";
+import YAML from 'yaml';
 
 export interface RawFrontmatter {
   name?: string;
@@ -27,7 +27,7 @@ export interface ParsedAgent {
  */
 export function parseFrontmatter(content: string): { frontmatter: RawFrontmatter; body: string } {
   // Check for frontmatter delimiters
-  if (!content.startsWith("---\n") && !content.startsWith("---\r\n")) {
+  if (!content.startsWith('---\n') && !content.startsWith('---\r\n')) {
     return { frontmatter: {}, body: content };
   }
 
@@ -44,16 +44,18 @@ export function parseFrontmatter(content: string): { frontmatter: RawFrontmatter
   let parsed: Record<string, unknown>;
   try {
     parsed = YAML.parse(frontmatterText) ?? {};
-  } catch {
+  }
+  catch {
     parsed = {};
   }
 
   // Convert to RawFrontmatter (string values only)
   const frontmatter: RawFrontmatter = {};
   for (const [key, value] of Object.entries(parsed)) {
-    if (typeof value === "string") {
+    if (typeof value === 'string') {
       frontmatter[key] = value;
-    } else if (value !== null && value !== undefined) {
+    }
+    else if (value !== null && value !== undefined) {
       // Coerce non-string values to string for backwards compatibility
       frontmatter[key] = String(value);
     }
@@ -71,23 +73,23 @@ export function parseAgentContent(
   fileName: string
 ): ParsedAgent | null {
   const { frontmatter, body } = parseFrontmatter(content);
-  
+
   if (!frontmatter.name || !frontmatter.description) {
     return null;
   }
-  
+
   const tools = frontmatter.tools
-    ?.split(",")
-    .map((t) => t.trim())
+    ?.split(',')
+    .map(t => t.trim())
     .filter(Boolean);
-  
+
   return {
     name: frontmatter.name,
     description: frontmatter.description,
     model: frontmatter.model,
     tools: tools?.length ? tools : undefined,
     taskTemplate: frontmatter.taskTemplate,
-    systemPrompt: body.trim(),
+    systemPrompt: body.trim()
   };
 }
 
@@ -95,6 +97,6 @@ export function parseAgentContent(
  * Extract the file name without extension for agent naming
  */
 export function getAgentNameFromFile(filePath: string): string {
-  const baseName = filePath.split(/[/\\]/).pop() || "";
-  return baseName.replace(/\.md$/i, "");
+  const baseName = filePath.split(/[/\\]/).pop() || '';
+  return baseName.replace(/\.md$/i, '');
 }

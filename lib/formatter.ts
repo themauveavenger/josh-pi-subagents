@@ -2,7 +2,7 @@
  * Agent list formatting - pure functions for unit testing
  */
 
-import type { AgentConfig } from "../agents.ts";
+import type { AgentConfig } from '../agents.ts';
 
 /**
  * Format the user message sent to a subagent.
@@ -30,17 +30,17 @@ export function formatAgentList(
   maxItems: number
 ): FormattedAgentList {
   if (agents.length === 0) {
-    return { text: "none", remaining: 0 };
+    return { text: 'none', remaining: 0 };
   }
-  
+
   const listed = agents.slice(0, maxItems);
   const remaining = agents.length - listed.length;
-  
+
   return {
     text: listed
-      .map((a) => `${a.name} (${a.source}): ${a.description}`)
-      .join("; "),
-    remaining,
+      .map(a => `${a.name} (${a.source}): ${a.description}`)
+      .join('; '),
+    remaining
   };
 }
 
@@ -48,6 +48,6 @@ export function formatAgentList(
  * Format available agent names as a quoted list
  */
 export function formatAgentNames(agents: AgentConfig[]): string {
-  if (agents.length === 0) return "none";
-  return agents.map((a) => `"${a.name}"`).join(", ");
+  if (agents.length === 0) return 'none';
+  return agents.map(a => `"${a.name}"`).join(', ');
 }
