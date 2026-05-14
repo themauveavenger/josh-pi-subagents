@@ -229,6 +229,34 @@ export default function (pi: ExtensionAPI) {
       const discovery = discoverAgents(ctx.cwd, agentScope);
       const agents = discovery.agents;
 
+      // If no agents are defined at all, provide helpful error
+      if (agents.length === 0) {
+        const helpMessage = [
+          "No agents found. You must define agents before using the delegate tool.",
+          "",
+          "Create agent definitions (.md files with YAML frontmatter) in:",
+          "  - ~/.pi/agent/agents/*.md     (user-level, always available)",
+          "  - ./.pi/agents/*.md           (project-level, requires agentScope: 'project')",
+          "",
+          "Example agent definition:",
+          "  ---",
+          "  name: researcher",
+          "  description: Research specialist for finding code",
+          "  model: opencode-go/kimi-k2.5",
+          "  tools: read, grep, find",
+          "  ---",
+          "  You are a research specialist. Find information and return concise results.",
+          "",
+          `Current agentScope: "${agentScope}"`,
+        ].join("\n");
+
+        return {
+          content: [{ type: "text", text: helpMessage }],
+          details: { agent: params.agent, task: params.task, exitCode: 1 },
+          isError: true,
+        };
+      }
+
       // Find the requested agent
       const agent = agents.find((a) => a.name === params.agent);
 

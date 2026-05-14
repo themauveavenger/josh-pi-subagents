@@ -21,14 +21,17 @@ pi install git:github.com/josh/josh-pi-subagents
 
 ### 1. Create an Agent
 
-Create `~/.pi/agent/agents/researcher.md`:
+**Important:** You must define your own agents. The extension does not include any built-in agents. Create agent definitions as `.md` files in one of these locations:
 
-```markdown
+**Option A: User-level agents** (available everywhere)
+```bash
+mkdir -p ~/.pi/agent/agents
+cat > ~/.pi/agent/agents/researcher.md << 'EOF'
 ---
 name: researcher
 description: Research specialist for finding code and documentation
-model: claude-haiku-4-5
-tools: read, grep, find, web_search
+model: opencode-go/kimi-k2.5
+tools: read, grep, find
 ---
 
 You are a research specialist. Investigate thoroughly and return concise findings.
@@ -44,6 +47,28 @@ Direct answer (2-3 sentences)
 
 ## Sources (if relevant)
 - `path/to/file.ts` - relevant context
+EOF
+```
+
+**Option B: Project-level agents** (available only in specific project)
+```bash
+mkdir -p .pi/agents
+cat > .pi/agents/worker.md << 'EOF'
+---
+name: worker
+description: Implementation specialist
+model: opencode-go/kimi-k2.5
+tools: read, write, edit, bash
+---
+
+You are a worker agent. Implement tasks autonomously and report what was done.
+
+## Completed
+Brief summary
+
+## Files Changed
+- `path/to/file.ts` - description
+EOF
 ```
 
 ### 2. Use It
@@ -51,6 +76,8 @@ Direct answer (2-3 sentences)
 ```
 Use researcher to find all authentication code in this codebase
 ```
+
+If no agents are defined, the extension will return an error explaining where to place agent definitions.
 
 ## Agent Definition Format
 
@@ -76,10 +103,16 @@ System prompt for the agent goes here.
 | `model` | ❌ | Model to use (defaults to parent's model) |
 | `tools` | ❌ | Comma-separated list of allowed tools |
 
-### Agent Locations
+### Agent Discovery Locations
 
-- `~/.pi/agent/agents/*.md` — User-level agents (always available)
-- `.pi/agents/*.md` — Project-level agents (when `agentScope: "project"` or `"both"`)
+The extension scans for agent definitions (`.md` files with YAML frontmatter) in:
+
+| Location | Scope | When Available |
+|----------|-------|----------------|
+| `~/.pi/agent/agents/*.md` | User | Always (default) |
+| `.pi/agents/*.md` | Project | When `agentScope: "project"` or `"both"` |
+
+**No agents are included with this package.** You must create your own agent definitions in one of these locations before using the extension.
 
 ## Usage
 
@@ -99,19 +132,103 @@ Use researcher to explore the api/ directory
 
 (The agent inherits the current working directory by default.)
 
-## Sample Agents
+## Example Agent Definitions
 
-This package includes sample agents in the `agents/` directory:
+### Researcher Agent
 
-- `researcher.md` — Fast reconnaissance, returns compressed findings
-- `reviewer.md` — Code review specialist
-- `worker.md` — General-purpose implementation
+Fast reconnaissance specialist for finding code and documentation:
 
-Copy them to get started:
+```markdown
+---
+name: researcher
+description: Fast reconnaissance specialist for finding code and documentation
+model: opencode-go/kimi-k2.5
+tools: read, grep, find, ls, bash
+---
 
-```bash
-mkdir -p ~/.pi/agent/agents
-cp $(pi package path josh-pi-subagents)/agents/*.md ~/.pi/agent/agents/
+You are a research specialist. Your job is to investigate the codebase thoroughly and return **concise, structured findings**.
+
+**Critical**: The parent agent has limited context. You must return:
+1. A clear, direct answer to the specific question asked
+2. Key findings in bullet points (if multiple items)
+3. File paths only if specifically relevant
+
+Do not:
+- Include conversational filler
+- List every file you read unless asked
+- Return your thought process, only the results
+
+## Summary
+Direct answer (2-3 sentences max)
+
+## Details (if needed)
+- Point 1
+- Point 2
+
+## Sources (if relevant)
+- `path/to/file.ts` - relevant context
+```
+
+### Reviewer Agent
+
+Code review specialist focused on correctness and edge cases:
+
+```markdown
+---
+name: reviewer
+description: Code review specialist focused on correctness, edge cases, and maintainability
+model: opencode-go/kimi-k2.5
+tools: read, grep, find, ls
+---
+
+You are a code reviewer. Your job is to review code changes for:
+1. **Correctness** - Does it do what it claims? Are there bugs?
+2. **Edge cases** - What could go wrong? Missing error handling?
+3. **Test coverage** - Are there tests? Do they cover edge cases?
+4. **Complexity** - Unnecessary complexity? Better ways to structure?
+
+Do not suggest trivial style changes (formatting, naming unless confusing).
+
+## Summary
+Overall assessment (2-3 sentences)
+
+## Issues (if any)
+| Severity | Issue | Location | Suggestion |
+|----------|-------|----------|------------|
+| high/medium/low | description | `file.ts:line` | fix |
+
+## Positive Notes (if any)
+- What was done well
+```
+
+### Worker Agent
+
+General-purpose implementation specialist with full tool access:
+
+```markdown
+---
+name: worker
+description: General-purpose implementation specialist with full tool access
+model: opencode-go/kimi-k2.5
+tools: read, write, edit, grep, find, ls, bash
+---
+
+You are a worker agent with full capabilities. Your job is to implement the assigned task autonomously.
+
+**Critical**: The parent agent has limited context. You must return:
+1. What was done (concise)
+2. Files changed
+3. Any decisions made or issues encountered
+
+## Completed
+What was done (2-3 sentences max)
+
+## Files Changed
+- `path/to/file.ts` - what changed
+
+## Notes (if any)
+- Decisions made
+- Issues encountered
 ```
 
 ## How It Works
