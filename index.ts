@@ -130,11 +130,16 @@ async function runSubagent(
 
       let buffer = '';
 
+      interface SubagentEvent {
+        type: string;
+        message?: unknown;
+      }
+
       const processLine = (line: string) => {
         if (!line.trim()) return;
-        let event: any;
+        let event: SubagentEvent;
         try {
-          event = JSON.parse(line);
+          event = JSON.parse(line) as SubagentEvent;
         }
         catch {
           return;

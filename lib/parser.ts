@@ -70,7 +70,7 @@ export function parseFrontmatter(content: string): { frontmatter: RawFrontmatter
  */
 export function parseAgentContent(
   content: string,
-  fileName: string
+  _fileName: string
 ): ParsedAgent | null {
   const { frontmatter, body } = parseFrontmatter(content);
 
